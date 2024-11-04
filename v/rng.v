@@ -2,8 +2,8 @@
 module rng (
 	input clk,
 	input reset,
-	output wire [5:0] rand_x,
-	output wire [4:0] rand_y
+	output wire [BOARD_WIDTH_BITS-1:0] rand_x,
+	output wire [BOARD_HEIGHT_BITS-1:0] rand_y 
 );
 
 `include "game_vga_param.h"

@@ -2,8 +2,8 @@
 Based off the VGA controller file in DE-10 lite demonstration, but heavily modified for snake game
 */
 
-module vga_controller(iRST_n,
-                      iVGA_CLK,
+module vga_controller(vga_reset,
+                      vga_clk,
 					  board_state,
 					  is_start_screen,
 					  is_over,
@@ -17,8 +17,8 @@ module vga_controller(iRST_n,
 
 
 			
-input iRST_n;
-input iVGA_CLK;
+input vga_reset;
+input vga_clk;
 input is_start_screen;
 input is_over;
 input [39*29*3-1:0] board_state;
@@ -36,11 +36,12 @@ wire [7:0] index;
 wire [23:0] bgr_data_raw;
 wire cBLANK_n,cVBLANK_n,cHS,cVS,rst;
 ////
-assign rst = ~iRST_n;
+assign rst = ~vga_reset;
 
 reg [11:0] bgr_data;
 
-wire [5:0] v_cell, h_cell;
+wire [BOARD_HEIGHT_BITS-1:0] v_cell;
+wire [BOARD_WIDTH_BITS-1:0] h_cell;
 wire [3:0] v_pos, h_pos;
 wire [8:0] sq_dist_from_ctr;
 
@@ -52,7 +53,7 @@ assign h_pos = (h_addr + 8)%CELL_SIZE;
 assign sq_dist_from_ctr = (v_pos-8)*(v_pos-8) + (h_pos-8)*(h_pos-8);
 
 // restructure board state into more easily usable array format
-wire[3:0] board_state_wires [39:1][29:1];
+wire[3:0] board_state_wires [BOARD_WIDTH:1][BOARD_HEIGHT:1];
 
 genvar v;
 generate 
@@ -67,7 +68,7 @@ wire [0:GAME_OVER_ARR_W*GAME_OVER_ARR_H-1] game_over_screen;
 
 
 
-video_sync_generator LTM_ins (.vga_clk(iVGA_CLK),
+video_sync_generator LTM_ins (.vga_clk(vga_clk),
                               .reset(rst),
                               .blank_n(cBLANK_n),
 							  .vblank_n(cVBLANK_n),
@@ -76,9 +77,9 @@ video_sync_generator LTM_ins (.vga_clk(iVGA_CLK),
 										);
 
 ////Address generator
-always@(posedge iVGA_CLK,negedge iRST_n)
+always@(posedge vga_clk,negedge vga_reset)
 begin
-  if (!iRST_n)
+  if (!vga_reset)
   begin
      h_addr<=19'd0;
 	 v_addr<=19'd0;
@@ -113,17 +114,17 @@ begin
 end
 
 // VGA output colors
-always@(posedge iVGA_CLK)
+always@(posedge vga_clk)
 begin
-	if (~iRST_n)
+	if (~vga_reset)
     	bgr_data<=12'h000;
 	
 	// draw gray border at edge of monitor
-    else if (v_cell==0 || v_cell==30 || h_cell==0 || h_cell==40)
+    else if (v_cell==0 || v_cell==BOARD_HEIGHT+1 || h_cell==0 || h_cell==BOARD_WIDTH+1)
 		bgr_data <= {4'hc, 4'hc, 4'hc};
 		
 	// main game board
-	else if (v_cell > 0 && v_cell < 30 && h_cell > 0 && h_cell < 40)
+	else if (v_cell > 0 && v_cell < BOARD_HEIGHT+1 && h_cell > 0 && h_cell < BOARD_WIDTH+1)
 	begin
 		// draw start screen
 		if (is_start_screen)
@@ -200,7 +201,7 @@ assign oVGA_R=bgr_data[3:0];
 ///////////////////
 //////Delay the iHD, iVD,iDEN for one clock cycle;
 reg mHS, mVS;
-always@(posedge iVGA_CLK)
+always@(posedge vga_clk)
 begin
   mHS<=cHS;
   mVS<=cVS;

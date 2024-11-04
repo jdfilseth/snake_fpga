@@ -7,7 +7,7 @@ module snake(
 
 	//////////// CLOCK //////////
 	input 		          		ADC_CLK_10,
-	input 		          		MAX10_CLK1_50,
+	input 		          		MAX10_CLK1_50, // only input clock used (50MHz)
 	input 		          		MAX10_CLK2_50,
 
 	//////////// SEG7 //////////
@@ -37,16 +37,17 @@ module snake(
 );
 
 
+`include "v/game_vga_param.h"	 
 
 //=======================================================
 //  REG/WIRE declarations
 //=======================================================
 
-wire VGA_CTRL_CLK; // clock for VGA
-wire GAME_CLK;
+wire vga_ctrl_clk; // clock for VGA (25MHz)
+wire game_clk; // main clock (10MHz)
 wire is_over; // 1 = game over, 0 = not game over; sent to VGA module
 wire is_start_screen; // 1 = start screen, 0 = not start screen; sent to VGA module
-wire [39*29*3-1:0] board_state; // carries board information for VGA to output
+wire [BOARD_WIDTH*BOARD_HEIGHT*3-1:0] board_state; // carries board information for VGA to output
 wire [10:0] score; // sends score to hex segments
 
 // for SPI/accelerometer
@@ -59,8 +60,8 @@ wire 	[15:0]	data_y;
 wire [2:0] direction;
 
 // random board position for generating new dots
-wire [5:0] 		rand_x;
-wire [4:0]		rand_y;
+wire [BOARD_WIDTH_BITS:0] 		rand_x;
+wire [BOARD_HEIGHT_BITS:0]		rand_y;
 
 
 //=======================================================
@@ -72,14 +73,14 @@ wire [4:0]		rand_y;
 vga_pll u_vga_pll(
 	.areset(),
 	.inclk0(MAX10_CLK1_50),
-	.c0(VGA_CTRL_CLK), // 25MHz
-	.c1(GAME_CLK), // 10MHz
+	.c0(vga_ctrl_clk), // 25MHz
+	.c1(game_clk), // 10MHz
 	.locked());
 
 // reset_delay for GSensor
 reset_delay	u_reset_delay	(	
             .iRSTN(KEY[0]),
-            .iCLK(VGA_CTRL_CLK),
+            .iCLK(vga_ctrl_clk),
             .oRST(dly_rst));
 
 // 2MHz and 2MHz w/ 270 degree phase shift PLL for GSensor
@@ -91,7 +92,7 @@ spi_pll     u_spi_pll	(
 
 // random number generator
 rng			rng_1 (
-	.clk(GAME_CLK),
+	.clk(game_clk),
 	.reset(KEY[0]),
 	.rand_x(rand_x),
 	.rand_y(rand_y)
@@ -101,7 +102,7 @@ rng			rng_1 (
 main_game mg_1(
 	.hard_reset(KEY[0]),
 	.game_reset(KEY[1]),
-	.clk(GAME_CLK),
+	.clk(game_clk),
 	.rand_x(rand_x),
 	.rand_y(rand_y),
 	.input_direction(direction),
@@ -133,8 +134,8 @@ assign_direction ad_1 (
 );
 
 // VGA output module
-vga_controller vga_ins(.iRST_n(KEY[0]),
-                      .iVGA_CLK(VGA_CTRL_CLK),
+vga_controller vga_ins(.vga_reset(KEY[0]),
+                      .vga_clk(vga_ctrl_clk),
 					  .board_state(board_state),
 					  .is_start_screen(is_start_screen),
 					  .is_over(is_over),

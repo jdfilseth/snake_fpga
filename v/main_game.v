@@ -39,8 +39,8 @@ reg[30:0] current_speed;
 
 reg[30:0] cnt;
 
-reg[5:0] head_h, tail_h;
-reg[4:0] head_v, tail_v;
+reg[BOARD_WIDTH_BITS-1:0] head_h, tail_h;
+reg[BOARD_HEIGHT_BITS-1:0] head_v, tail_v;
 
 wire[1:0] direction;
 
@@ -52,8 +52,8 @@ assign direction = ((board_state_reg[head_h][head_v][0] == 1) &&
 	board_state_reg[head_h][head_v] - 1 : input_direction[1:0];
 
 
-wire[5:0] h_mod;
-wire[4:0] v_mod;
+wire[BOARD_WIDTH_BITS-1:0] h_mod; // dimensions must match head_h for -1 to work correctly
+wire[BOARD_HEIGHT_BITS-1:0] v_mod; // dimensions must match head_v for -1 to work correctly
 assign v_mod = (direction==2) - (direction==0);
 assign h_mod = (direction==3) - (direction==1);
 
